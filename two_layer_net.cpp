@@ -16,7 +16,7 @@ public:
   Two_layer_net(){}
   Two_layer_net(int input, int hidden, int output, double l_rate){
     layer1.W = MatrixXd::Random(hidden, input).array();
-    layer1.b = MatrixXd::Zero(hidden, 1) ;
+    layer1.b = MatrixXd::Zero(hidden, 1);
     layer3.W = MatrixXd::Random(output, hidden).array();
     layer3.b = MatrixXd::Zero(output, 1);
     this->l_rate = l_rate;
@@ -64,9 +64,9 @@ public:
     int label = test.label;
     X = predict(X);
     int ans;
-    for(int i=0; i<X.rows(); i++){
-      for(int j=0; j<X.cols(); j++){ // j=1
-        if(X.maxCoeff() == X(i, j)){
+    for(int i=0; i<X.rows(); i++)
+      for(int j=0; j<X.cols(); j++) // j=1
+        if(X.maxCoeff() == X(i, j))
           ans = i; // 最大要素が複数あれば後の方が採用される
 
     result[label][ans]++;
@@ -132,7 +132,7 @@ int main(){
       ss << setfill('0') << setw(5) << right << to_string(j+1) << ".pgm";
       ss >> filename;
       if(train_data[j].readdata("images/train_img_pgm/"+to_string(i)+"/img"+filename)){
-        train_data[j].label = (i+5)%10;
+        train_data[j].label = i;
       }
     }
   }
@@ -148,7 +148,7 @@ int main(){
       ss << setfill('0') << setw(5) << right << to_string(j+1) << ".pgm";
       ss >> filename;
       if(test_data[j].readdata("images/test_img_pgm/"+to_string(i)+"/img"+filename)){
-        test_data[j].label = (i+5)%10;
+        test_data[j].label = i;
       }
     }
   }
@@ -160,27 +160,31 @@ int main(){
   int hidden = 100;
   int output = 10;
   double l_rate = 0.01;
+  int repeat = 1;
 
   Two_layer_net network(input, hidden, output, l_rate);
   //network.load("weight.txt");
 
-  for(int j=0; j<20; j++){
-    for(int i=0; i<TEST; i++)
-      network.test(test_data[i]);
+  for(int i=0; i<repeat+1; i++){
 
-    for(int i=0; i<10; i++){
-      for(int j=0; j<11; j++){
-        printf("%5d",network.result[i][j]);
-      }
-      cout << "   accuracy:"<< (double)network.result[i][i] / network.result[i][10] << endl;
-    }
-
-    //network.save("weight"+ to_string(i)+".txt");
     for(int i=0; i<11; i++)
       network.result[i].assign(11,0);
 
-    for(int i=0; i<TRAIN; i++)
-      network.train(train_data[i]);
+    for(int j=0; j<TEST; j++)
+      network.test(test_data[j]);
+
+    for(int j=0; j<10; j++){
+      for(int k=0; k<11; k++){
+        printf("%5d",network.result[j][k]);
+      }
+      cout << "   accuracy:"<< (double)network.result[j][j] / network.result[j][10] << endl;
+    }
+
+    network.save("weight"+ to_string(i)+".txt");
+
+    if(i != repeat) 
+      for(int j=0; j<TRAIN; j++)
+        network.train(train_data[j]);
     
     print_time(start);
   }
