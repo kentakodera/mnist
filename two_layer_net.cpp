@@ -11,6 +11,7 @@ private:
 
 public:
   vector<vector<int>> result;
+  vector<vector<int>> wrong;
   double l;
 
   Two_layer_net(){}
@@ -21,8 +22,12 @@ public:
     layer3.b = MatrixXd::Zero(output, 1);
     this->l_rate = l_rate;
     result.resize(11);
-    for(int i=0; i<11; i++)
+    wrong.resize(10);
+    for(int i=0; i<11; i++){
       result[i].assign(11,0);
+      wrong[i].clear();
+    }
+    
   }
 
   MatrixXd predict(MatrixXd X){
@@ -71,9 +76,12 @@ public:
 
     result[label][ans]++;
     result[label][10]++;
+    if(label != ans)
+      wrong[ans].push_back(test.filenumber);
+    
   }
 
-  void save(string filename){
+  void save_weights(string filename){
     ofstream ofs;
     ofs.open(filename, ios::out);
     ofs << layer1.W.rows() << " " << layer1.W.cols() << endl;
@@ -117,6 +125,33 @@ public:
     }
   }
 
+  void print_result(){
+    ofstream ofs;
+    ofs.open("accuracy"+to_string(l_rate)+".csv", ios::app);
+    for(int i=0; i<10; i++){
+      for(int j=0; j<11; j++){
+        printf("%5d",result[i][j]);
+      }
+      double accuracy = (double)result[i][i] / result[i][10];
+      cout << "   accuracy:"<< accuracy << endl;
+      ofs << accuracy << ","; 
+    }
+    ofs << endl;
+  }
+
+  void save_wrong(string filename){
+    ofstream ofs;
+    ofs.open(filename, ios::app);
+    for(int i=0; i<10; i++){
+      ofs << i << ": ,";
+      for(int j=0; j<wrong[i].size(); j++){
+        ofs << wrong[i][j] << ", ";
+      }
+      ofs << endl;
+    }
+    ofs << endl;
+  }
+
 };
 
 int main(){
@@ -133,11 +168,11 @@ int main(){
       ss >> filename;
       if(train_data[j].readdata("images/train_img_pgm/"+to_string(i)+"/img"+filename)){
         train_data[j].label = i;
+        train_data[j].filenumber = j;
       }
     }
   }
-  cout << "finished reading train data" << endl;   
-  print_time(start);
+  cout << "finished reading train data" << endl;  print_time(start);
 
   const int TEST = 10000;
   vector<Image_mat> test_data(TEST);
@@ -149,44 +184,48 @@ int main(){
       ss >> filename;
       if(test_data[j].readdata("images/test_img_pgm/"+to_string(i)+"/img"+filename)){
         test_data[j].label = i;
+        test_data[j].filenumber = j;
       }
     }
   }
-  cout << "finished test train data " << endl;
-  print_time(start);
+  cout << "finished reading test data " << endl;  print_time(start);
 
   // parameters
   int input = 784;
   int hidden = 100;
   int output = 10;
-  double l_rate = 0.01;
   int repeat = 1;
+  double l_rate = 0.005;
 
   Two_layer_net network(input, hidden, output, l_rate);
   //network.load("weight.txt");
 
-  for(int i=0; i<repeat+1; i++){
+  for(int i=0; i<=repeat; i++){
 
-    for(int i=0; i<11; i++)
+    if(i != 0){ 
+      for(int j=0; j<TRAIN; j++)
+        network.train(train_data[j]);
+
+      cout << "trained" << i << endl;  print_time(start);
+    }
+
+    for(int i=0; i<10; i++){
       network.result[i].assign(11,0);
+      network.wrong[i].clear();
+    }
 
     for(int j=0; j<TEST; j++)
       network.test(test_data[j]);
 
-    for(int j=0; j<10; j++){
-      for(int k=0; k<11; k++){
-        printf("%5d",network.result[j][k]);
-      }
-      cout << "   accuracy:"<< (double)network.result[j][j] / network.result[j][10] << endl;
-    }
+    cout << "tested" << i << endl;  print_time(start);
+    network.print_result();
 
-    network.save("weight"+ to_string(i)+".txt");
+    if(i%(repeat/2)==0)
+      network.save_weights("weights/weight"+ to_string(i) +".txt");
 
-    if(i != repeat) 
-      for(int j=0; j<TRAIN; j++)
-        network.train(train_data[j]);
+    if(i!=0 && (i%10==0 || i==1))
+      network.save_wrong("wrong"+to_string(l_rate)+".txt");
     
-    print_time(start);
   }
 
   return 0;

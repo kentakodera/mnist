@@ -12,19 +12,12 @@
 using namespace std;
 using namespace Eigen;
 
-typedef struct{
-  int h;
-  int w;
-}Point;
-
 class Image_mat{
-private:
-  const int MAX = 10000;
-
 public:
   int W, H;
   MatrixXd data;
   int label;
+  int filenumber;
 
   bool readdata(string filename){
     string str;
